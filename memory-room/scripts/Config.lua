@@ -5,6 +5,12 @@ Config.Debug = {
 	TriggerTransparency = 0.7,
 }
 
+Config.Logging = {
+	RoomEnter = true,
+	Goal = true,
+	Fail = true,
+}
+
 Config.Teleport = {
 	CooldownSec = 0.2,
 	VerticalOffset = 3,

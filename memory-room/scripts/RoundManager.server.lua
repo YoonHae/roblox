@@ -39,6 +39,7 @@ end
 local configModule = memoryRoomFolder:FindFirstChild("Config")
 local Config = {
 	Debug = { ShowTriggers = false, TriggerTransparency = 0.7 },
+	Logging = { RoomEnter = true, Goal = true, Fail = true },
 	Teleport = { CooldownSec = 0.2, VerticalOffset = 3 },
 	Overview = { Enabled = true, StepSec = 0.5 },
 }
@@ -112,6 +113,18 @@ local function fireDebugState(player: Player, state: PlayerState, enteredRoom: M
 		EnteredRoomId = enteredRoomId,
 		EnteredPathIndex = enteredPathIndex,
 	})
+end
+
+local function shouldLog(kind: string): boolean
+	local logging = Config.Logging
+	if type(logging) ~= "table" then
+		return true
+	end
+	local enabled = logging[kind]
+	if type(enabled) == "boolean" then
+		return enabled
+	end
+	return true
 end
 
 local function rebuildRoomIndex()
@@ -251,13 +264,15 @@ local function handleRoomEnter(player: Player, enteredRoom: Model)
 
 	if enteredPathIndex == expectedPathIndex then
 		local isGoal = enteredRoom:GetAttribute("IsGoal") == true
-		if isGoal then
+		if isGoal and shouldLog("Goal") then
 			print(string.format("[Goal] %s reached %s", player.Name, enteredRoomId))
 		end
 
 		state.currentCorrectPathIndex += 1
 		state.currentRoomId = enteredRoomId
-		print(string.format("[RoomEnter] %s -> %s (PathIndex=%d OK)", player.Name, enteredRoomId, enteredPathIndex))
+		if shouldLog("RoomEnter") then
+			print(string.format("[RoomEnter] %s -> %s (PathIndex=%d OK)", player.Name, enteredRoomId, enteredPathIndex))
+		end
 		fireDebugState(player, state, enteredRoom)
 		return
 	end
@@ -268,23 +283,27 @@ local function handleRoomEnter(player: Player, enteredRoom: Model)
 		local character = player.Character
 		if spawnPart and character then
 			state.lastTeleportAt = now
-			warn(string.format(
-				"[RoomEnter] %s -> %s (PathIndex=%d, expected=%d) FAIL, teleport back to %s",
-				player.Name,
-				enteredRoomId,
-				enteredPathIndex,
-				expectedPathIndex,
-				getRoomId(currentRoom)
-				))
+			if shouldLog("Fail") then
+				warn(string.format(
+					"[RoomEnter] %s -> %s (PathIndex=%d, expected=%d) FAIL, teleport back to %s",
+					player.Name,
+					enteredRoomId,
+					enteredPathIndex,
+					expectedPathIndex,
+					getRoomId(currentRoom)
+					))
+			end
 			teleportToSpawn(character, spawnPart)
 			fireDebugState(player, state, enteredRoom)
 		else
-			warn(string.format(
-				"[RoomEnter] fail handling skipped (spawn/character missing). currentRoom=%s, spawn=%s, character=%s",
-				getRoomId(currentRoom),
-				tostring(spawnPart ~= nil),
-				tostring(character ~= nil)
-			))
+			if shouldLog("Fail") then
+				warn(string.format(
+					"[RoomEnter] fail handling skipped (spawn/character missing). currentRoom=%s, spawn=%s, character=%s",
+					getRoomId(currentRoom),
+					tostring(spawnPart ~= nil),
+					tostring(character ~= nil)
+				))
+			end
 		end
 	end
 end

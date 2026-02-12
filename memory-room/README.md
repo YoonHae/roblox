@@ -48,6 +48,12 @@
 - RoomEntryTrigger가 안 먹음: `CanTouch=true`, `CanCollide=false` 확인
 - 계속 실패/무한 텔포: Trigger가 벽/문 경계까지 닿아서 오탐 → Trigger를 살짝 inset
 - 오버뷰가 안 나옴: `Workspace/Rooms` 폴더명, `PathIndex` 값, `IsStart`/`IsGoal` 확인
+- 오버뷰가 가끔 시작 안 됨: `RoundManager`/`CameraDirector`를 최신 버전으로 함께 적용 (`Remotes/ClientReady` 핸드셰이크 필요)
 - 오버뷰 시점이 애매함: `Workspace/OverviewCamera` 파트를 만들고 원하는 방향/높이에 배치 (`Config.Overview.UseCameraPart=true`)
 - 낙사/리스폰 반복: `RoundManager`는 스폰을 강제 텔포하지 않음(SpawnLocation을 Start 방 안에 두는 방식 권장)
 - 로그가 너무 많음: 운영 기본 로그는 `[RoomEnter]`, `[Goal]`, 실패 텔포 경고만 유지
+
+## 6) 로그 제어
+
+- `Config.Logging.RoomEnter` / `Goal` / `Fail`로 서버 로그 출력량 제어 가능
+- 디버그 단계에서는 `true`, 운영 단계에서는 필요한 항목만 `true` 권장
