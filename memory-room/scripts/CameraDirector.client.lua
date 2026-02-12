@@ -1,4 +1,3 @@
-local overviewCameraPart = workspace:WaitForChild("OverviewCamera")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -16,6 +15,7 @@ end
 local memoryRoomFolder = ReplicatedStorage:WaitForChild("MemoryRoom")
 local remotesFolder = memoryRoomFolder:WaitForChild("Remotes")
 local startOverviewRemote = remotesFolder:WaitForChild("StartOverview")
+local clientReadyRemote = remotesFolder:WaitForChild("ClientReady")
 
 local Config = require(memoryRoomFolder:WaitForChild("Config"))
 
@@ -89,11 +89,18 @@ local function playOverview(orderedRooms: { Model }, stepSec: number)
 
 	setMovementLocked(true)
 
-	local center, radius = computeBounds(orderedRooms)
-	local distance = radius * (Config.Overview.DistanceFactor or 1.2) + (Config.Overview.DistanceOffset or 40)
-	local height = radius * (Config.Overview.HeightFactor or 2.0) + (Config.Overview.HeightOffset or 80)
-	--local overviewCFrame = CFrame.new(center + Vector3.new(-distance, height, -distance), center)
-	local overviewCFrame = overviewCameraPart.CFrame
+	local overviewCFrame: CFrame
+	local useCameraPart = Config.Overview.UseCameraPart ~= false
+	local cameraPartName = Config.Overview.CameraPartName or "OverviewCamera"
+	local overviewCameraPart = workspace:FindFirstChild(cameraPartName)
+	if useCameraPart and overviewCameraPart and overviewCameraPart:IsA("BasePart") then
+		overviewCFrame = overviewCameraPart.CFrame
+	else
+		local center, radius = computeBounds(orderedRooms)
+		local distance = radius * (Config.Overview.DistanceFactor or 1.2) + (Config.Overview.DistanceOffset or 40)
+		local height = radius * (Config.Overview.HeightFactor or 2.0) + (Config.Overview.HeightOffset or 80)
+		overviewCFrame = CFrame.new(center + Vector3.new(-distance, height, -distance), center)
+	end
 	
 	cam.CameraType = Enum.CameraType.Scriptable
 	cam.CFrame = overviewCFrame
@@ -129,4 +136,13 @@ startOverviewRemote.OnClientEvent:Connect(function(orderedRooms: { Model }, step
 		stepSec = Config.Overview.StepSec or 0.5
 	end
 	playOverview(orderedRooms, stepSec)
+end)
+
+local function notifyClientReady()
+	clientReadyRemote:FireServer()
+end
+
+notifyClientReady()
+localPlayer.CharacterAdded:Connect(function()
+	task.defer(notifyClientReady)
 end)

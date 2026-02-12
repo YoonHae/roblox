@@ -22,6 +22,13 @@ if not startOverviewRemote then
 	startOverviewRemote.Parent = remotesFolder
 end
 
+local clientReadyRemote = remotesFolder:FindFirstChild("ClientReady")
+if not clientReadyRemote then
+	clientReadyRemote = Instance.new("RemoteEvent")
+	clientReadyRemote.Name = "ClientReady"
+	clientReadyRemote.Parent = remotesFolder
+end
+
 local debugStateRemote = remotesFolder:FindFirstChild("DebugState")
 if not debugStateRemote then
 	debugStateRemote = Instance.new("RemoteEvent")
@@ -51,6 +58,8 @@ type PlayerState = {
 }
 
 local playerStates: { [number]: PlayerState } = {}
+local playerClientReady: { [number]: boolean } = {}
+local lastRoundStartAt: { [number]: number } = {}
 local triggerToRoomModel: { [Instance]: Model } = {}
 local roomIdToModel: { [string]: Model } = {}
 local pathIndexToRoom: { [number]: Model } = {}
@@ -186,6 +195,26 @@ local function startRoundForPlayer(player: Player)
 	fireDebugState(player, state, nil)
 end
 
+local function canStartOverviewFor(player: Player): boolean
+	if not Config.Overview.Enabled then
+		return true
+	end
+	return playerClientReady[player.UserId] == true
+end
+
+local function tryStartRound(player: Player)
+	if not canStartOverviewFor(player) then
+		return
+	end
+	local now = os.clock()
+	local userId = player.UserId
+	if now - (lastRoundStartAt[userId] or 0) < 0.5 then
+		return
+	end
+	lastRoundStartAt[userId] = now
+	startRoundForPlayer(player)
+end
+
 local function getPlayerFromHitPart(hitPart: BasePart): Player?
 	local character = hitPart.Parent
 	if character then
@@ -205,8 +234,6 @@ local function getPlayerFromHitPart(hitPart: BasePart): Player?
 end
 
 local function handleRoomEnter(player: Player, enteredRoom: Model)
-	print(string.format("[EnterAttempt] %s -> %s", player.Name, enteredRoom:GetAttribute("RoomId")))
-
 	local state = ensurePlayerState(player)
 	local enteredRoomId = getRoomId(enteredRoom)
 	if enteredRoomId == state.currentRoomId then
@@ -236,17 +263,6 @@ local function handleRoomEnter(player: Player, enteredRoom: Model)
 	end
 
 	local currentRoom = state.currentRoomId and roomIdToModel[state.currentRoomId] or startRoom
-	print(string.format("[FailDebug] currentRoom=%s spawn=%s",
-		tostring(currentRoom and currentRoom.Name),
-		tostring(currentRoom and currentRoom:FindFirstChild("RoomSpawn"))
-		))
-	if currentRoom then
-		print("[FailDebug] children of " .. currentRoom.Name .. ":")
-		for _, child in ipairs(currentRoom:GetChildren()) do
-			print(" -", child.Name, child.ClassName)
-		end
-	end
-
 	if currentRoom then
 		local spawnPart = getRoomSpawn(currentRoom)
 		local character = player.Character
@@ -262,6 +278,13 @@ local function handleRoomEnter(player: Player, enteredRoom: Model)
 				))
 			teleportToSpawn(character, spawnPart)
 			fireDebugState(player, state, enteredRoom)
+		else
+			warn(string.format(
+				"[RoomEnter] fail handling skipped (spawn/character missing). currentRoom=%s, spawn=%s, character=%s",
+				getRoomId(currentRoom),
+				tostring(spawnPart ~= nil),
+				tostring(character ~= nil)
+			))
 		end
 	end
 end
@@ -279,13 +302,30 @@ for triggerPart, roomModel in pairs(triggerToRoomModel) do
 	end)
 end
 
+clientReadyRemote.OnServerEvent:Connect(function(player)
+	playerClientReady[player.UserId] = true
+	tryStartRound(player)
+end)
+
 Players.PlayerAdded:Connect(function(player)
 	ensurePlayerState(player)
-	task.defer(function()
-		startRoundForPlayer(player)
+	playerClientReady[player.UserId] = false
+
+	player.CharacterAdded:Connect(function()
+		task.defer(function()
+			tryStartRound(player)
+		end)
 	end)
+
+	if player.Character then
+		task.defer(function()
+			tryStartRound(player)
+		end)
+	end
 end)
 
 Players.PlayerRemoving:Connect(function(player)
 	playerStates[player.UserId] = nil
+	playerClientReady[player.UserId] = nil
+	lastRoundStartAt[player.UserId] = nil
 end)

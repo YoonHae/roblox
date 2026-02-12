@@ -224,6 +224,7 @@ Target Duration:
     - `Floor`, `Walls`, `Doors...`
     - `RoomEntryTrigger` (Part: 바닥 면적, `Transparency=1`, `CanCollide=false`, `CanTouch=true`)
     - `RoomSpawn` (Part: 텔레포트/스폰 기준점)
+- `Workspace/OverviewCamera` (Part, 선택: 오버뷰 고정 시점)
 - `ServerScriptService/RoundManager` (Script)
 - `ReplicatedStorage/Shared` (Folder: 상수/유틸/RemoteEvent 등 필요 시)
 - `StarterPlayer/StarterPlayerScripts/CameraDirector` (LocalScript, 오버뷰 연출)
@@ -239,6 +240,7 @@ Target Duration:
 ### Test & Debug (Studio)
 - 기본 테스트: `Test > Play`(F5)로 1인 반복 실행
 - Output 확인: `View > Output`을 켜고, 핵심 이벤트에 `print/warn` 로그를 남긴다.
+- 오버뷰 시점 고정(권장): `OverviewCamera` 파트를 배치하고 `CameraDirector`가 해당 CFrame을 사용하도록 설정
 - 추천 디버그 값(화면 표시):
   - `CurrentRoomId`
   - `CurrentCorrectPathIndex`

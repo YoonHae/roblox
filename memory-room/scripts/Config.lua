@@ -13,10 +13,12 @@ Config.Teleport = {
 Config.Overview = {
 	Enabled = true,
 	StepSec = 0.6,
-	HeightFactor = 1.5,
+	CameraPartName = "OverviewCamera",
+	UseCameraPart = true,
+	HeightFactor = 2.0,
 	HeightOffset = 80,
-	DistanceFactor = 2.8,
-	DistanceOffset = 140,
+	DistanceFactor = 1.2,
+	DistanceOffset = 40,
 }
 
 Config.Highlight = {
